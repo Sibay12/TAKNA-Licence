@@ -1,0 +1,28 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>License Admin</title>
+<style>body{font-family:system-ui;max-width:900px;margin:20px auto;padding:0 12px}input,button{padding:8px;margin:3px}table{width:100%;border-collapse:collapse;font-size:13px}td,th{border-bottom:1px solid #ddd;padding:6px;text-align:left}code{background:#eef;padding:4px 6px;display:inline-block}.r{color:#c00}</style></head><body>
+<h2>License Admin</h2>
+<input id="k" type="password" placeholder="LICENSE_ADMIN_KEY"><button onclick="load()">Load</button>
+<h3>New license</h3>
+<input id="b" placeholder="Buyer name"><input id="m" type="number" value="1" style="width:70px" title="max domains"><input id="d" type="number" value="0" style="width:90px" title="days (0 = lifetime)"><button onclick="mk()">Create</button>
+<div id="out"></div><table id="t"></table>
+<h3>Updates (releases)</h3>
+<p style="font-size:13px;color:#555">Upload the <code>taknapay-update.gz</code> made by <code>node scripts/build-release.js</code>. Resellers will see it in their admin panel and can install it or ignore it.</p>
+<input id="rv" placeholder="Version e.g. 1.5.0" style="width:130px"><input id="rn" placeholder="What's new (shown to resellers)" style="width:300px"><input id="rf" type="file">
+<label style="font-size:13px"><input id="ri" type="checkbox"> needs new npm packages (reseller must redeploy)</label><button onclick="up()">Publish update</button>
+<div id="rout"></div><table id="rt"></table>
+<script>
+const H=()=>({'x-admin-key':k.value,'Content-Type':'application/json'});
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function mk(){const r=await(await fetch('/admin/licenses',{method:'POST',headers:H(),body:JSON.stringify({buyer:b.value,maxDomains:m.value,days:d.value})})).json();
+out.innerHTML=r.ok?`<p>Purchase key: <code>${esc(r.purchaseKey)}</code> Activation code: <code>${esc(r.activationCode)}</code><br>Shown only once - copy it now.</p>`:'<p class=r>Failed (wrong admin key?)</p>';load()}
+async function act(id,a){if(a==='delete'&&!confirm('Delete?'))return;await fetch('/admin/licenses/'+id+'/'+a,{method:'POST',headers:H()});load()}
+async function up(){const f=rf.files[0];if(!f||!rv.value)return rout.innerHTML='<p class=r>Choose a file and enter the version</p>';
+const r=await(await fetch('/admin/releases',{method:'POST',headers:{'x-admin-key':k.value,'x-version':rv.value.trim(),'x-notes':encodeURIComponent(rn.value),'x-requires-install':ri.checked?'1':'0','Content-Type':'application/octet-stream'},body:f})).json();
+rout.innerHTML=r.ok?'<p>Published.</p>':'<p class=r>'+esc(r.reason||'Failed')+'</p>';loadR()}
+async function ra(id,a){if(a==='delete'&&!confirm('Delete this release?'))return;await fetch('/admin/releases/'+id+'/'+a,{method:'POST',headers:H()});loadR()}
+async function loadR(){const r=await(await fetch('/admin/releases',{headers:H()})).json();if(!r.ok)return;
+rt.innerHTML='<tr><th>Version</th><th>Notes</th><th>Size</th><th>Date</th><th></th></tr>'+r.releases.map(x=>`<tr><td>${esc(x.version)}${x.published?'':' <span class=r>(hidden)</span>'}</td><td>${esc(x.notes)}</td><td>${Math.round(x.size/1024)} KB</td><td>${new Date(x.createdAt).toLocaleString()}</td><td><button onclick="ra('${x._id}','${x.published?'unpublish':'publish'}')">${x.published?'Hide':'Show'}</button><button onclick="ra('${x._id}','delete')">Delete</button></td></tr>`).join('')}
+async function load(){loadR();const r=await(await fetch('/admin/licenses',{headers:H()})).json();if(!r.ok){t.innerHTML='<tr><td class=r>Wrong admin key</td></tr>';return}
+t.innerHTML='<tr><th>Buyer</th><th>Key</th><th>Status</th><th>Domains</th><th>Last seen</th><th></th></tr>'+r.licenses.map(l=>`<tr><td>${esc(l.buyer)}</td><td>…${esc(l.keyHint)}</td><td class="${l.status!=='ACTIVE'?'r':''}">${esc(l.status)}${l.expiresAt?'<br>till '+new Date(l.expiresAt).toLocaleDateString():''}</td><td>${l.domains.map(esc).join('<br>')||'-'} (${l.domains.length}/${l.maxDomains})</td><td>${l.lastSeen?new Date(l.lastSeen).toLocaleString():'-'}</td>
+<td><button onclick="act('${l._id}','${l.status==='ACTIVE'?'revoke':'restore'}')">${l.status==='ACTIVE'?'Revoke':'Restore'}</button><button onclick="act('${l._id}','reset-domains')">Reset domains</button><button onclick="act('${l._id}','delete')">Delete</button></td></tr>`).join('')}
+</script></body></html>
