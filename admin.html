@@ -1,28 +1,88 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>License Admin</title>
-<style>body{font-family:system-ui;max-width:900px;margin:20px auto;padding:0 12px}input,button{padding:8px;margin:3px}table{width:100%;border-collapse:collapse;font-size:13px}td,th{border-bottom:1px solid #ddd;padding:6px;text-align:left}code{background:#eef;padding:4px 6px;display:inline-block}.r{color:#c00}</style></head><body>
-<h2>License Admin</h2>
-<input id="k" type="password" placeholder="LICENSE_ADMIN_KEY"><button onclick="load()">Load</button>
-<h3>New license</h3>
-<input id="b" placeholder="Buyer name"><input id="m" type="number" value="1" style="width:70px" title="max domains"><input id="d" type="number" value="0" style="width:90px" title="days (0 = lifetime)"><button onclick="mk()">Create</button>
-<div id="out"></div><table id="t"></table>
-<h3>Updates (releases)</h3>
-<p style="font-size:13px;color:#555">Upload the <code>taknapay-update.gz</code> made by <code>node scripts/build-release.js</code>. Resellers will see it in their admin panel and can install it or ignore it.</p>
-<input id="rv" placeholder="Version e.g. 1.5.0" style="width:130px"><input id="rn" placeholder="What's new (shown to resellers)" style="width:300px"><input id="rf" type="file">
-<label style="font-size:13px"><input id="ri" type="checkbox"> needs new npm packages (reseller must redeploy)</label><button onclick="up()">Publish update</button>
-<div id="rout"></div><table id="rt"></table>
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex"><title>License Admin</title>
+<style>
+:root{--bg:#0b1020;--sb:#0e1428;--card:#121a31;--bd:#1f2a48;--tx:#e8eeff;--mu:#8b9bc2;--pr:#6c8cff;--pr2:#8b5cf6;--ok:#2dd4a0;--wa:#fbbf24;--er:#f87171}
+:root.light{--bg:#f4f6fb;--sb:#fff;--card:#fff;--bd:#e6eaf3;--tx:#18233d;--mu:#6b7a99;--pr:#4f6ef0;--pr2:#7c4dff;--ok:#0e9f6e;--wa:#b7791f;--er:#dc2626}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input,textarea{font:inherit;color:inherit}.hide{display:none!important}.mu{color:var(--mu)}.sm{font-size:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:18px;margin-bottom:16px}
+.btn{background:linear-gradient(135deg,var(--pr),var(--pr2));color:#fff;border:0;border-radius:10px;padding:9px 16px;cursor:pointer;font-weight:600}.btn:active{transform:scale(.97)}
+.btn.g{background:transparent;color:var(--tx);border:1px solid var(--bd)}.btn.s{padding:5px 10px;font-size:12.5px;border-radius:8px}
+.btn.ok{background:var(--ok);color:#06241a}.btn.er{background:var(--er)}.btn.wa{background:var(--wa);color:#2b1c00}
+input,textarea{background:color-mix(in srgb,var(--bg) 60%,var(--card));border:1px solid var(--bd);border-radius:10px;padding:10px 13px;width:100%}
+input:focus,textarea:focus{outline:none;border-color:var(--pr)}
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(900px 500px at 15% -10%,color-mix(in srgb,var(--pr) 26%,transparent),transparent)}
+#login .card{width:100%;max-width:360px;display:grid;gap:14px;text-align:center;margin:0}
+.shell{display:flex;min-height:100vh}
+#sb{width:230px;flex:none;position:sticky;top:0;height:100vh;background:var(--sb);border-right:1px solid var(--bd);padding:18px 12px;display:flex;flex-direction:column;gap:4px}
+.brand{padding:2px 8px 18px;font-weight:800;font-size:16px}.brand small{display:block;color:var(--mu);font-weight:500;font-size:12px}
+.nv{display:block;width:100%;background:none;border:0;border-radius:10px;padding:10px 12px;cursor:pointer;color:var(--mu);font-weight:600;text-align:left}
+.nv.on{background:color-mix(in srgb,var(--pr) 16%,transparent);color:var(--pr)}.sp{flex:1}
+.main{flex:1;min-width:0;padding:22px;max-width:1200px;margin:0 auto}
+h1{font-size:20px;margin:0 0 16px}h3{margin:0 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px}.stat b{display:block;font-size:22px}
+.fm{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;align-items:end}.fm label{display:grid;gap:5px;font-weight:600;font-size:13px}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:760px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--bd);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--mu)}
+.st{padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:700}.st.ACTIVE,.st.SENT{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.st.REVOKED{background:color-mix(in srgb,var(--er) 18%,transparent);color:var(--er)}.st.WAIT{background:color-mix(in srgb,var(--wa) 18%,transparent);color:var(--wa)}
+.acts{display:flex;gap:6px;flex-wrap:wrap}.dom{display:inline-block;background:color-mix(in srgb,var(--pr) 14%,transparent);border-radius:8px;padding:2px 8px;margin:1px 0;font-weight:600}
+.key{font:700 15px ui-monospace,Menlo,monospace;letter-spacing:.5px;word-break:break-all}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--card);border:1px solid var(--bd);padding:10px 18px;border-radius:12px;opacity:0;pointer-events:none;transition:.2s;z-index:99}#toast.on{opacity:1}
+@media(max-width:760px){.shell{display:block}#sb{width:auto;height:auto;position:static;flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--bd)}.brand{width:100%;padding-bottom:6px}.sp{display:none}.nv{width:auto}.main{padding:14px}}
+</style></head><body>
+<div id="login"><form class="card" onsubmit="return login(event)"><h1 style="margin:0">License Admin</h1><span class="mu">Enter admin password</span>
+<input id="pw" type="password" placeholder="Admin password" autocomplete="current-password" required><span id="lerr" style="color:var(--er)"></span><button class="btn">Login</button></form></div>
+
+<div class="shell hide" id="app">
+<aside id="sb"><div class="brand">License Admin<small>Sales &amp; updates</small></div>
+<button class="nv on" id="nL" onclick="tab('L')">Licenses</button><button class="nv" id="nU" onclick="tab('U')">Updates</button>
+<div class="sp"></div><button class="nv" onclick="document.documentElement.classList.toggle('light')">Theme</button><button class="nv" onclick="logout()">Logout</button></aside>
+<div class="main">
+<div id="pL"><h1>Licenses</h1>
+<div class="grid"><div class="stat"><span class="mu sm">Total sold</span><b id="sT">0</b></div><div class="stat"><span class="mu sm">Domains registered</span><b id="sD">0</b></div><div class="stat"><span class="mu sm">Revenue</span><b id="sR">₹0</b></div><div class="stat"><span class="mu sm">Not activated yet</span><b id="sN">0</b></div></div>
+<div class="card"><h3>Create license</h3><div class="fm"><label>Customer name<input id="cb" placeholder="Name"></label><label>Sold for (₹)<input id="cp" type="number" min="0" placeholder="0"></label><button class="btn" onclick="mk()">Create lifetime license</button></div>
+<div id="made" class="hide" style="margin-top:14px"><div class="mu sm">Shown only once, send to the buyer:</div><div>Purchase key: <span class="key" id="mk1"></span></div><div>Activation code: <span class="key" id="mk2"></span></div><button class="btn g s" style="margin-top:8px" onclick="cp()">Copy both</button></div></div>
+<div class="card tw"><table><thead><tr><th>Customer</th><th>Price</th><th>Key</th><th>Domain (auto)</th><th>Version</th><th>Status</th><th></th></tr></thead><tbody id="rows"></tbody></table></div></div>
+
+<div id="pU" class="hide"><h1>Updates</h1>
+<div class="card"><h3>Upload new version</h3><div class="fm"><label>Version (e.g. 1.5.0)<input id="uv" placeholder="1.5.0"></label><label>Bundle file (.gz)<input id="uf" type="file" accept=".gz"></label></div>
+<label style="display:grid;gap:5px;font-weight:600;font-size:13px;margin-top:10px">What's new<textarea id="un" rows="3"></textarea></label>
+<label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="ui" style="width:auto"> Needs npm install / redeploy (customer must update manually)</label>
+<button class="btn" style="margin-top:12px" onclick="up()">Upload (saved as draft)</button></div>
+<div class="card tw"><table><thead><tr><th>Version</th><th>Notes</th><th>Size</th><th>Status</th><th></th></tr></thead><tbody id="rel"></tbody></table></div></div>
+</div></div><div id="toast"></div>
 <script>
-const H=()=>({'x-admin-key':k.value,'Content-Type':'application/json'});
-const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-async function mk(){const r=await(await fetch('/admin/licenses',{method:'POST',headers:H(),body:JSON.stringify({buyer:b.value,maxDomains:m.value,days:d.value})})).json();
-out.innerHTML=r.ok?`<p>Purchase key: <code>${esc(r.purchaseKey)}</code> Activation code: <code>${esc(r.activationCode)}</code><br>Shown only once - copy it now.</p>`:'<p class=r>Failed (wrong admin key?)</p>';load()}
-async function act(id,a){if(a==='delete'&&!confirm('Delete?'))return;await fetch('/admin/licenses/'+id+'/'+a,{method:'POST',headers:H()});load()}
-async function up(){const f=rf.files[0];if(!f||!rv.value)return rout.innerHTML='<p class=r>Choose a file and enter the version</p>';
-const r=await(await fetch('/admin/releases',{method:'POST',headers:{'x-admin-key':k.value,'x-version':rv.value.trim(),'x-notes':encodeURIComponent(rn.value),'x-requires-install':ri.checked?'1':'0','Content-Type':'application/octet-stream'},body:f})).json();
-rout.innerHTML=r.ok?'<p>Published.</p>':'<p class=r>'+esc(r.reason||'Failed')+'</p>';loadR()}
-async function ra(id,a){if(a==='delete'&&!confirm('Delete this release?'))return;await fetch('/admin/releases/'+id+'/'+a,{method:'POST',headers:H()});loadR()}
-async function loadR(){const r=await(await fetch('/admin/releases',{headers:H()})).json();if(!r.ok)return;
-rt.innerHTML='<tr><th>Version</th><th>Notes</th><th>Size</th><th>Date</th><th></th></tr>'+r.releases.map(x=>`<tr><td>${esc(x.version)}${x.published?'':' <span class=r>(hidden)</span>'}</td><td>${esc(x.notes)}</td><td>${Math.round(x.size/1024)} KB</td><td>${new Date(x.createdAt).toLocaleString()}</td><td><button onclick="ra('${x._id}','${x.published?'unpublish':'publish'}')">${x.published?'Hide':'Show'}</button><button onclick="ra('${x._id}','delete')">Delete</button></td></tr>`).join('')}
-async function load(){loadR();const r=await(await fetch('/admin/licenses',{headers:H()})).json();if(!r.ok){t.innerHTML='<tr><td class=r>Wrong admin key</td></tr>';return}
-t.innerHTML='<tr><th>Buyer</th><th>Key</th><th>Status</th><th>Domains</th><th>Last seen</th><th></th></tr>'+r.licenses.map(l=>`<tr><td>${esc(l.buyer)}</td><td>…${esc(l.keyHint)}</td><td class="${l.status!=='ACTIVE'?'r':''}">${esc(l.status)}${l.expiresAt?'<br>till '+new Date(l.expiresAt).toLocaleDateString():''}</td><td>${l.domains.map(esc).join('<br>')||'-'} (${l.domains.length}/${l.maxDomains})</td><td>${l.lastSeen?new Date(l.lastSeen).toLocaleString():'-'}</td>
-<td><button onclick="act('${l._id}','${l.status==='ACTIVE'?'revoke':'restore'}')">${l.status==='ACTIVE'?'Revoke':'Restore'}</button><button onclick="act('${l._id}','reset-domains')">Reset domains</button><button onclick="act('${l._id}','delete')">Delete</button></td></tr>`).join('')}
+let K=sessionStorage.getItem('lk')||'',L=[];const $=i=>document.getElementById(i),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(m){$('toast').textContent=m;$('toast').classList.add('on');setTimeout(()=>$('toast').classList.remove('on'),2500)}
+async function api(u,o={}){const r=await fetch(u,{...o,headers:{'x-admin-key':K,'Content-Type':'application/json'}});if(r.status===401){logout();throw 0}return r.json()}
+async function login(e){e.preventDefault();K=$('pw').value;const r=await fetch('/admin/licenses',{headers:{'x-admin-key':K}});if(!r.ok){$('lerr').textContent='Wrong password';return false}sessionStorage.setItem('lk',K);start();return false}
+function logout(){sessionStorage.removeItem('lk');location.reload()}
+function start(){$('login').classList.add('hide');$('app').classList.remove('hide');loadL();loadU()}
+function tab(w){['L','U'].forEach(k=>{$('p'+k).classList.toggle('hide',k!==w);$('n'+k).classList.toggle('on',k===w)})}
+const dt=d=>d?new Date(d).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'}):'-';
+async function loadL(){const d=await api('/admin/licenses');L=d.licenses||[];
+$('sT').textContent=L.length;$('sD').textContent=L.reduce((a,l)=>a+l.domains.length,0);$('sR').textContent='₹'+L.reduce((a,l)=>a+(l.price||0),0).toLocaleString('en-IN');$('sN').textContent=L.filter(l=>!l.domains.length).length;
+$('rows').innerHTML=L.map(l=>`<tr><td><b>${esc(l.buyer||'-')}</b><br><span class="mu sm">Sold ${dt(l.createdAt)}</span></td><td>₹${(l.price||0).toLocaleString('en-IN')}</td><td>…${esc(l.keyHint)}<br><span class="mu sm">${l.expiresAt?'Expires '+dt(l.expiresAt):'Lifetime'}</span></td>
+<td>${l.domains.map(x=>`<span class="dom">${esc(x)}</span>`).join('<br>')||'<span class="mu">Not activated yet</span>'}<br><span class="mu sm">${l.activatedAt?'Activated '+dt(l.activatedAt):''}</span></td>
+<td>${esc(l.version||'-')}<br><span class="mu sm">Seen ${dt(l.lastSeen)}</span></td><td><span class="st ${l.status}">${l.status}</span></td>
+<td class="acts">${l.domains.length?`<button class="btn g s" onclick="act('${l._id}','reset-domains','Allow this license on a NEW domain? The old domain will stop working.')">Allow new domain</button>`:''}
+${l.status==='ACTIVE'?`<button class="btn wa s" onclick="act('${l._id}','revoke','Revoke this license?')">Revoke</button>`:`<button class="btn ok s" onclick="act('${l._id}','restore')">Restore</button>`}
+<button class="btn er s" onclick="act('${l._id}','delete','Delete permanently?')">Delete</button></td></tr>`).join('')||'<tr><td colspan="7" class="mu">No licenses yet</td></tr>'}
+async function act(id,a,c){if(c&&!confirm(c))return;const d=await api(`/admin/licenses/${id}/${a}`,{method:'POST',body:'{}'});toast(d.ok?'Done':'Failed');loadL()}
+async function mk(){const d=await api('/admin/licenses',{method:'POST',body:JSON.stringify({buyer:$('cb').value,price:$('cp').value})});if(!d.ok)return toast('Failed');
+$('mk1').textContent=d.purchaseKey;$('mk2').textContent=d.activationCode;$('made').classList.remove('hide');$('cb').value=$('cp').value='';loadL()}
+function cp(){navigator.clipboard.writeText('Purchase key: '+$('mk1').textContent+'\nActivation code: '+$('mk2').textContent);toast('Copied')}
+async function loadU(){const d=await api('/admin/releases'),R=d.releases||[];
+$('rel').innerHTML=R.map(r=>`<tr><td><b>${esc(r.version)}</b><br><span class="mu sm">${dt(r.createdAt)}</span></td><td style="white-space:pre-wrap;max-width:320px">${esc(r.notes)}${r.requiresInstall?'\n(needs manual redeploy)':''}</td><td>${Math.round(r.size/1024)} KB</td>
+<td><span class="st ${r.published?'SENT':'WAIT'}">${r.published?'SENT '+dt(r.sentAt):'DRAFT'}</span></td><td class="acts">
+${r.published?`<button class="btn g s" onclick="ra('${r._id}','unsend','Withdraw this update?')">Withdraw</button>`:`<button class="btn s" onclick="ra('${r._id}','send','Send this update to ALL customers now?')">Send update</button>`}
+<button class="btn er s" onclick="ra('${r._id}','delete','Delete this release?')">Delete</button></td></tr>`).join('')||'<tr><td colspan="5" class="mu">No releases yet</td></tr>'}
+async function ra(id,a,c){if(!confirm(c))return;const d=await api(`/admin/releases/${id}/${a}`,{method:'POST',body:'{}'});toast(d.ok?'Done':'Failed');loadU()}
+async function up(){const f=$('uf').files[0];if(!f||!$('uv').value)return toast('Version and file needed');
+const r=await fetch('/admin/releases',{method:'POST',headers:{'x-admin-key':K,'x-version':$('uv').value.trim(),'x-notes':encodeURIComponent($('un').value),'x-requires-install':$('ui').checked?'1':'0'},body:f});const d=await r.json();
+toast(d.ok?'Uploaded as draft. Click Send update to release it.':d.reason||'Failed');if(d.ok){$('uv').value=$('un').value='';$('uf').value='';loadU()}}
+if(K)api('/admin/licenses').then(start).catch(()=>{});
 </script></body></html>
